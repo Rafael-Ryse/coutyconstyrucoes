@@ -246,9 +246,9 @@ p{color:var(--texto)}
 .zap:hover{transform:translateY(-3px);background:var(--azul-med)}
 .zap svg{width:26px;height:26px}
 
-.rv{opacity:0;transform:translateY(22px);transition:opacity .75s cubic-bezier(.2,.7,.2,1),transform .75s cubic-bezier(.2,.7,.2,1)}
+.rv{opacity:0;transform:translateY(26px);transition:opacity .9s cubic-bezier(.16,.84,.24,1),transform .9s cubic-bezier(.16,.84,.24,1)}
 .rv.on{opacity:1;transform:none}
-.rv-d1{transition-delay:.09s}.rv-d2{transition-delay:.18s}
+.rv-d1{transition-delay:.1s}.rv-d2{transition-delay:.2s}
 
 /* ---------------- responsivo ---------------- */
 @media (max-width:1180px){.nav{gap:22px}.nav a{font-size:15px}}
@@ -674,6 +674,41 @@ Sobre a obra: ${f.msg.value||'—'}`;
   window.open(`https://wa.me/${ZAP}?text=${encodeURIComponent(txt)}`,'_blank');
 });
 document.getElementById('ano').textContent=new Date().getFullYear();
+
+/* ---- rolagem suave com inércia ----
+   Só no desktop com mouse: em toque o próprio sistema já tem inércia,
+   e interceptar o gesto ali só piora. Respeita "reduzir movimento". */
+(function(){
+  const podeSuavizar = window.matchMedia('(hover:hover) and (pointer:fine)').matches
+    && !window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  if(!podeSuavizar) return;
+
+  let alvo = window.scrollY, atual = alvo, rodando = false, guiando = false;
+  const limite = () => document.documentElement.scrollHeight - window.innerHeight;
+
+  function passo(){
+    const dif = alvo - atual;
+    if(Math.abs(dif) < 0.4){
+      atual = alvo; guiando = true; window.scrollTo(0, atual);
+      guiando = false; rodando = false; return;
+    }
+    atual += dif * 0.11;              // quanto menor, mais deslizante
+    guiando = true; window.scrollTo(0, atual); guiando = false;
+    requestAnimationFrame(passo);
+  }
+
+  addEventListener('wheel', e => {
+    if(e.ctrlKey) return;             // zoom do navegador
+    e.preventDefault();
+    const fator = e.deltaMode === 1 ? 18 : e.deltaMode === 2 ? window.innerHeight : 1;
+    alvo = Math.max(0, Math.min(limite(), alvo + e.deltaY * fator));
+    if(!rodando){ rodando = true; requestAnimationFrame(passo); }
+  }, {passive:false});
+
+  // teclado, barra de rolagem e âncoras continuam nativos: só ressincroniza
+  addEventListener('scroll', () => { if(!guiando){ alvo = atual = window.scrollY; } }, {passive:true});
+  addEventListener('resize', () => { alvo = atual = window.scrollY; });
+})();
 </script>
 </body>
 </html>
